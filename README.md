@@ -57,7 +57,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-# Variables de entorno (rellena los valores, ver "Base de datos local")
+# Variables de entorno (rellena los valores, ver "Variables de entorno" y "Base de datos local")
 cp .env.example .env
 
 # Arrancar la base de datos (ver "Base de datos local")
@@ -69,6 +69,9 @@ uvicorn app.main:app --reload
 
 - API: http://localhost:8000
 - Documentación interactiva (Swagger): http://localhost:8000/docs
+- Comprobación de que la API está viva: http://localhost:8000/health → `{"status": "ok"}`
+
+Lanza siempre `uvicorn` desde `backend/`: los imports del código parten de esa carpeta y la configuración busca el `.env` en el directorio actual.
 
 Con el entorno activo verás `(.venv)` al inicio del prompt. Para confirmarlo:
 
@@ -160,6 +163,36 @@ postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:<POSTGRES_PORT>/<POST
 
 Cada carpeta tiene su propio `.env`, que **no se sube a git**. Lo que sí se versiona es el `.env.example` con las claves y sin valores reales. Copia el ejemplo a `.env` y rellénalo.
 
+### Backend
+
+Además de las variables de PostgreSQL (ver [Base de datos local](#base-de-datos-local)), la API lee estas de `backend/.env`. Son **obligatorias**: si falta alguna, la API no arranca y avisa con `Field required`.
+
+| Variable       | Descripción                                                     | Ejemplo                       |
+| -------------- | --------------------------------------------------------------- | ----------------------------- |
+| `ENVIRONMENT`  | Entorno de ejecución                                            | `development`                 |
+| `CORS_ORIGINS` | Orígenes del frontend que pueden llamar a la API, en formato JSON | `["http://localhost:5173"]` |
+
+`CORS_ORIGINS` es una lista, así que va entre corchetes y con comillas dobles. En producción debe contener solo el dominio real del frontend, nunca `*`.
+
+## Estructura de la API
+
+```
+backend/app/
+├── main.py          # crea la app, CORS, GET /health y monta las rutas de /api/v1
+├── core/config.py   # configuración leída del .env (pydantic-settings)
+└── api/v1/router.py # router que agrupa las rutas de negocio
+```
+
+- `GET /health` queda fuera de la versión: es una comprobación de infraestructura.
+- Todas las rutas de negocio cuelgan de `/api/v1`. Cada recurso (`auth`, `games`, `backlog`…) tendrá su propio router en `app/api/v1/`, incluido desde `router.py`.
+
+## Editor
+
+`pyrightconfig.json`, en la raíz, indica al analizador de tipos dónde está el entorno virtual (`backend/.venv`) y que los imports parten de `backend/`. Así funcionan el autocompletado y la documentación al pasar el ratón.
+
+- **VS Code:** usa la extensión Python con Pylance.
+- **Cursor:** Pylance no funciona fuera de VS Code; instala **Cursor Pyright** (`anysphere.cursorpyright`).
+
 ## Convenciones
 
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`).
@@ -171,7 +204,10 @@ Cada carpeta tiene su propio `.env`, que **no se sube a git**. Lo que sí se ver
 | -------------------------------------------- | ---------------------------------------------------------------------------- |
 | `externally-managed-environment` al usar pip | No instales en el Python global. Activa el venv: `source .venv/bin/activate` |
 | `command not found: uvicorn`                 | El venv no está activado o falta `pip install -r requirements.txt`           |
-| Error de CORS en el navegador                | Revisa `allow_origins` en el backend y que el puerto del frontend coincida   |
+| Error de CORS en el navegador                | Comprueba que `CORS_ORIGINS` en `backend/.env` incluye la URL exacta del frontend (protocolo y puerto) y reinicia la API |
+| `Field required` al arrancar la API          | Falta una variable obligatoria en `backend/.env`. Compáralo con `.env.example` |
+| `error parsing value for field "cors_origins"` | `CORS_ORIGINS` no está en formato JSON. Usa `["http://localhost:5173"]`    |
+| `ModuleNotFoundError: No module named 'app'` | Lanza `uvicorn` desde `backend/`                                             |
 | Cambiaste la versión de Python               | Borra `backend/.venv` y vuelve a crearlo                                     |
 | `Cannot connect to the Docker daemon`        | Docker Desktop no está arrancado. Ábrelo y espera a que termine de iniciar   |
 | `port is already allocated` (5432)           | Otro Postgres usa ese puerto. Cambia `POSTGRES_PORT` en `backend/.env`       |
