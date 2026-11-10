@@ -15,6 +15,7 @@ Quien juega acumula decenas de títulos que nunca empieza o deja a medias. Las a
 | Backlog personal con estados: pendiente, jugando, terminado, abandonado                       | MVP · `v0.1.0` |
 | **«Elígeme uno»:** propone un juego según los minutos disponibles y el ánimo, con los motivos | MVP · `v0.1.0` |
 | Interfaz en español e inglés                                                                  | MVP · `v0.1.0` |
+| Demo sin registro: cada visitante entra con un clic en su propia cuenta de ejemplo            | MVP · `v0.1.0` |
 | Recomendaciones por similitud de géneros y etiquetas, sin LLM                                 | `v0.2.0`       |
 
 ## Stack
