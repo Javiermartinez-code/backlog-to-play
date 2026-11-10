@@ -13,7 +13,7 @@ Aplicación web para gestionar el backlog de videojuegos: buscar juegos, organiz
 ## Stack
 
 - **Backend:** Python 3.12 (`backend/.venv`), FastAPI, Uvicorn, Pydantic 2, pydantic-settings. PostgreSQL 17 en Docker.
-- **Frontend:** Vue 3, TypeScript, Vite, Vitest, Prettier. Node `^22.18.0 || >=24.12.0`.
+- **Frontend:** Vue 3, TypeScript, Vite, Vue Router 5, Pinia 4, Vitest, Prettier. Node `^22.18.0 || >=24.12.0`. Gestor de paquetes: **npm** (solo `package-lock.json`; no usar pnpm ni yarn).
 - **Planificado (ADRs en Notion):** SQLAlchemy + Alembic, autenticación JWT, búsqueda de juegos en RAWG con caché, despliegue en Vercel.
 - **Gestión del proyecto:** Notion (sprints, tareas, ADRs). Las tareas se identifican como `S.N` (p. ej. `0.4`) y tienen un bloque "Qué / Hecho cuando" con los criterios de aceptación. La tabla de endpoints está en la página "Documentación de API (endpoints)".
 
@@ -37,7 +37,7 @@ Uvicorn debe lanzarse **desde `backend/`**: los imports parten de ahí (`from ap
 ```bash
 npm run dev                        # :5173
 npm run test:unit -- --run         # todos los tests, sin modo watch
-npx vitest run src/components/__tests__/HelloWorld.spec.ts   # un solo archivo
+npx vitest run src/views/__tests__/HomeView.spec.ts          # un solo archivo
 npx vitest run -t "nombre del test"                          # un solo test
 npm run type-check                 # vue-tsc; Vite en dev NO comprueba tipos
 npm run build                      # type-check + build
@@ -57,9 +57,14 @@ npm run format
 
 `pyrightconfig.json` (raíz) apunta a `backend/.venv` y fija `backend/` como raíz de imports. En Cursor el servidor de tipos es Cursor Pyright: Pylance no funciona fuera de VS Code.
 
-## Frontend
+## Arquitectura del frontend
 
-Sigue siendo el proyecto generado por `create-vue`, con el contenido de ejemplo (`HelloWorld`, `TheWelcome`). La tarea 0.5 lo convierte en un esqueleto con Vue Router y Pinia, que aún no están instalados. Alias `@` → `src/`. Usar `<script setup lang="ts">` (Composition API).
+- `src/main.ts`: crea la app, registra Pinia y el router (Pinia **antes** que el router, porque los guards de navegación consultarán stores) y la monta en `#app`.
+- `src/App.vue`: marco común (navegación con `RouterLink`) y `<RouterView />`, donde se pinta la vista de la ruta actual.
+- `src/router/index.ts`: tabla de rutas con `createWebHistory`. Cada ruta tiene `name` y se navega por nombre (`{ name: 'home' }`), no por URL. Solo `HomeView` se importa directamente; el resto de vistas se cargan bajo demanda con `() => import('@/views/XxxView.vue')`.
+- Carpetas: `views/` (una página por ruta, sufijo `View`), `components/` (piezas reutilizables, nombres de varias palabras en PascalCase) y `stores/` (un store por dominio, `useXxxStore`). Las dos últimas están vacías, con `.gitkeep`.
+- Tests en carpetas `__tests__/` junto al código, con nombre `*.spec.ts`. El nombre importa: `tsconfig.app.json` excluye `src/**/__tests__/*` del type-check de la app, y Vitest falla con *No test files found* si no hay ningún test.
+- Alias `@` → `src/`. Usar `<script setup lang="ts">` (Composition API).
 
 ## Convenciones
 
@@ -68,3 +73,7 @@ Sigue siendo el proyecto generado por `create-vue`, con el contenido de ejemplo 
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`), con la descripción en minúscula.
 - **Variables de entorno:** al añadir una, ponerla sin valor en el `.env.example` de su carpeta.
 - **Python:** no actualizar pip en el Python global (Homebrew da `externally-managed-environment`); hacerlo dentro del venv. Cambiar de versión de Python obliga a recrear el venv.
+
+## Limitaciones
+
+- **`curl`:** prohibido ejecutarlo sin consultar antes al usuario.
