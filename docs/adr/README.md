@@ -15,6 +15,7 @@ Un ADR (_Architecture Decision Record_) documenta una decisión técnica importa
 | [ADR-11](0011-despliegue-en-vercel.md)      | Despliegue completo en Vercel                                | Infraestructura | Aceptada  | 2026-10-28 |
 | [ADR-12](0012-identidad-visual-propia.md)   | Identidad visual propia                                      | UI/UX           | Propuesta | 2026-10-28 |
 | [ADR-13](0013-repositorio-sin-licencia.md)  | Repositorio público sin licencia de código abierto           | Proceso         | Aceptada  | 2026-11-10 |
+| [ADR-14](0014-demo-por-visitante.md)        | Demo sin registro con una cuenta temporal por visitante      | Arquitectura    | Aceptada  | 2026-11-10 |
 
 ## Estados
 

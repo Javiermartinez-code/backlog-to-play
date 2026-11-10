@@ -23,12 +23,12 @@ flowchart LR
     API -. "solo si el juego no está en caché" .-> RAWG[API de RAWG]
 ```
 
-| Pieza | Responsabilidad | Estado |
-| --- | --- | --- |
-| **Frontend** | Interfaz, navegación y estado de la sesión en el navegador | Esqueleto con router y Pinia |
-| **API** | Reglas de negocio, autenticación, caché de RAWG y recomendaciones | Esqueleto con configuración, CORS y `/health` |
-| **PostgreSQL** | Usuarios, backlog y copia en caché de los juegos | Contenedor local en Docker, sin tablas todavía |
-| **RAWG** | Catálogo externo de videojuegos | Planificado (Sprint 2) |
+| Pieza          | Responsabilidad                                                   | Estado                                         |
+| -------------- | ----------------------------------------------------------------- | ---------------------------------------------- |
+| **Frontend**   | Interfaz, navegación y estado de la sesión en el navegador        | Esqueleto con router y Pinia                   |
+| **API**        | Reglas de negocio, autenticación, caché de RAWG y recomendaciones | Esqueleto con configuración, CORS y `/health`  |
+| **PostgreSQL** | Usuarios, backlog y copia en caché de los juegos                  | Contenedor local en Docker, sin tablas todavía |
+| **RAWG**       | Catálogo externo de videojuegos                                   | Planificado (Sprint 2)                         |
 
 ## Principios
 
@@ -61,14 +61,14 @@ backend/app/
 
 Al crecer, el backend se organizará en capas con responsabilidades separadas:
 
-| Carpeta | Responsabilidad |
-| --- | --- |
-| `api/v1/` | Rutas HTTP: validan la entrada, llaman al servicio y devuelven la respuesta |
-| `schemas/` | Modelos Pydantic de entrada y salida (el contrato de la API) |
-| `services/` | Lógica de negocio: caché de RAWG, «Elígeme uno», recomendaciones |
-| `models/` | Modelos de SQLAlchemy (las tablas) |
-| `db/` | Sesión de base de datos y dependencias de FastAPI |
-| `alembic/` | Migraciones del esquema |
+| Carpeta     | Responsabilidad                                                             |
+| ----------- | --------------------------------------------------------------------------- |
+| `api/v1/`   | Rutas HTTP: validan la entrada, llaman al servicio y devuelven la respuesta |
+| `schemas/`  | Modelos Pydantic de entrada y salida (el contrato de la API)                |
+| `services/` | Lógica de negocio: caché de RAWG, «Elígeme uno», recomendaciones            |
+| `models/`   | Modelos de SQLAlchemy (las tablas)                                          |
+| `db/`       | Sesión de base de datos y dependencias de FastAPI                           |
+| `alembic/`  | Migraciones del esquema                                                     |
 
 Las rutas no hablan con la base de datos directamente: delegan en los servicios. Así la lógica de negocio se puede probar sin levantar un servidor HTTP.
 
@@ -85,14 +85,14 @@ frontend/src/
 └── assets/              Estilos globales
 ```
 
-| Concepto | Uso en el proyecto |
-| --- | --- |
-| **Vista** (`views/`) | Una página asociada a una ruta: `HomeView`, y más adelante `BacklogView`, `GameView`… |
-| **Componente** (`components/`) | Una pieza reutilizable dentro de las vistas: una tarjeta de juego, un selector de estado |
-| **Store** (`stores/`) | Estado compartido entre vistas: la sesión del usuario, el backlog cargado |
-| **Router** | Relaciona cada URL con una vista. Las vistas que no son la de inicio se cargarán bajo demanda con `() => import(...)` |
+| Concepto                       | Uso en el proyecto                                                                                                    |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Vista** (`views/`)           | Una página asociada a una ruta: `HomeView`, y más adelante `BacklogView`, `GameView`…                                 |
+| **Componente** (`components/`) | Una pieza reutilizable dentro de las vistas: una tarjeta de juego, un selector de estado                              |
+| **Store** (`stores/`)          | Estado compartido entre vistas: la sesión del usuario, el backlog cargado                                             |
+| **Router**                     | Relaciona cada URL con una vista. Las vistas que no son la de inicio se cargarán bajo demanda con `() => import(...)` |
 
-Pinia se registra antes que el router porque los *guards* de navegación (por ejemplo, «esta ruta exige sesión») consultarán el store de autenticación.
+Pinia se registra antes que el router porque los _guards_ de navegación (por ejemplo, «esta ruta exige sesión») consultarán el store de autenticación.
 
 ## Flujo de una petición: «Elígeme uno»
 
@@ -134,6 +134,8 @@ erDiagram
         string email UK
         string password_hash
         string locale
+        boolean is_demo
+        datetime expires_at
         datetime created_at
     }
     games {
@@ -165,29 +167,56 @@ erDiagram
 - `games` es la **caché de RAWG**: `cached_at` permite decidir cuándo refrescar un juego.
 - `backlog_entries.status` admite `pending`, `playing`, `finished` y `abandoned`.
 - La combinación `user_id` + `game_id` es única: un juego no puede estar dos veces en el mismo backlog (la API responde `409`).
+- `users.is_demo` y `users.expires_at` identifican las cuentas demo temporales (ver [Demo para visitantes](#demo-para-visitantes)). En los usuarios reales, `is_demo` es `false` y `expires_at` es nulo.
+
+## Demo para visitantes
+
+Planificada para el Sprint 6 ([ADR-14](adr/0014-demo-por-visitante.md)). La demo es una forma de entrar en la misma web, no un despliegue aparte:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as Visitante
+    participant F as Frontend
+    participant A as API
+    participant D as PostgreSQL
+
+    V->>F: Pulsa «Probar la demo»
+    F->>A: POST /api/v1/auth/demo
+    A->>D: Crea un usuario temporal
+    Note over A,D: is_demo = true<br/>expires_at = ahora + 24 h
+    A->>D: Copia el backlog de la plantilla
+    A-->>F: 201 con los tokens
+    F-->>V: Mi backlog con los datos de ejemplo
+```
+
+- Cada visitante tiene su propia cuenta, así que nunca ve lo que otro ha cambiado o borrado.
+- La plantilla es la misma función que llena la base de datos local en desarrollo.
+- La tarea diaria de Vercel borra las cuentas demo caducadas.
+- Hay un límite de cuentas por IP y de búsquedas en RAWG por cuenta demo; si se supera, la API responde `429`.
 
 ## Seguridad
 
-| Aspecto | Medida | Estado |
-| --- | --- | --- |
-| Secretos | Solo en variables de entorno; `.env` fuera de Git | Implementado |
-| CORS | Lista blanca de orígenes desde la configuración | Implementado |
-| Base de datos local | Puerto publicado solo en `127.0.0.1` | Implementado |
-| Contraseñas | Hash con argon2 o bcrypt; nunca se guardan en claro | Planificado (Sprint 1) |
-| Autenticación | JWT de acceso de corta duración y token de refresco | Planificado (Sprint 1) |
+| Aspecto             | Medida                                              | Estado                 |
+| ------------------- | --------------------------------------------------- | ---------------------- |
+| Secretos            | Solo en variables de entorno; `.env` fuera de Git   | Implementado           |
+| CORS                | Lista blanca de orígenes desde la configuración     | Implementado           |
+| Base de datos local | Puerto publicado solo en `127.0.0.1`                | Implementado           |
+| Contraseñas         | Hash con argon2 o bcrypt; nunca se guardan en claro | Planificado (Sprint 1) |
+| Autenticación       | JWT de acceso de corta duración y token de refresco | Planificado (Sprint 1) |
 
 ## Despliegue
 
 Planificado para el Sprint 6 ([ADR-11](adr/0011-despliegue-en-vercel.md) y [ADR-6](adr/0006-postgresql-en-supabase.md)):
 
-| Pieza | Destino |
-| --- | --- |
-| Frontend | Vercel (sitio estático) |
-| API | Vercel (funciones serverless de Python) |
-| Base de datos | PostgreSQL en Supabase, a través del *pooler* de conexiones |
+| Pieza         | Destino                                                     |
+| ------------- | ----------------------------------------------------------- |
+| Frontend      | Vercel (sitio estático)                                     |
+| API           | Vercel (funciones serverless de Python)                     |
+| Base de datos | PostgreSQL en Supabase, a través del _pooler_ de conexiones |
 
 En serverless cada invocación puede abrir conexiones nuevas, así que la API usará el pooler de Supabase para no agotar el límite de conexiones del plan gratuito.
 
 ## Pendiente de decidir
 
-- **Identidad visual** ([ADR-12](adr/0012-identidad-visual-propia.md), en estado *Propuesta*): se cerrará con el moodboard del Sprint 0.
+- **Identidad visual** ([ADR-12](adr/0012-identidad-visual-propia.md), en estado _Propuesta_): se cerrará con el moodboard del Sprint 0.
