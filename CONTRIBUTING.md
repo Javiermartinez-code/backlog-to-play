@@ -2,6 +2,15 @@
 
 Flujo de trabajo de Backlog to Play: GitHub Flow, Conventional Commits y SemVer.
 
+## Contribuciones externas
+
+Backlog to Play es un proyecto personal, pero se aceptan Pull Requests. El autor decide si se incorporan, y puede cerrar una PR sin fusionarla si no encaja con la dirección del proyecto. Para cambios grandes, abre antes un *issue* y coméntalo.
+
+El repositorio **no tiene licencia de código abierto** (ver [ADR-13](docs/adr/0013-repositorio-sin-licencia.md)). Al enviar una Pull Request, aceptas que:
+
+- La contribución es obra tuya y tienes derecho a aportarla.
+- Cedes al autor del proyecto, de forma gratuita, los derechos de explotación sobre la contribución, incluido el de cambiar su licencia en el futuro. Seguirás figurando como autor de tu aportación.
+
 ## Principio
 
 `main` siempre está estable y **solo recibe cambios por Pull Request**. No se hace push directo ni force push.

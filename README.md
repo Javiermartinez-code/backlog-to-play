@@ -1,214 +1,85 @@
 # Backlog to Play
 
-Aplicación web para gestionar tu backlog de videojuegos: busca juegos, organiza tu lista de pendientes y descubre qué jugar a continuación con recomendaciones explicables.
+Aplicación web para gestionar el backlog de videojuegos que responde a una pregunta concreta: **¿qué juego me pongo hoy?**
 
-> Proyecto en desarrollo.
+Quien juega acumula decenas de títulos que nunca empieza o deja a medias. Las aplicaciones existentes sirven para apuntar y puntuar, pero ayudan poco a decidir. Backlog to Play combina el backlog del usuario, el tiempo que tiene disponible y lo que le apetece para proponer un juego, y siempre **explica por qué** lo propone.
 
-## Estructura del repositorio
+> **Estado:** en desarrollo, Sprint 0 (cimientos). Todavía no hay ninguna versión publicada. Consulta la [hoja de ruta](docs/roadmap.md).
 
-Es un monorepo con dos proyectos independientes que solo se comunican por HTTP:
+## Funcionalidades
 
-```
-backlog-to-play/
-├── backend/     # API REST con FastAPI (Python)
-├── frontend/    # SPA con Vue 3 + TypeScript + Vite
-└── README.md
-```
+| Funcionalidad                                                                                 | Versión        |
+| --------------------------------------------------------------------------------------------- | -------------- |
+| Registro e inicio de sesión con JWT                                                           | MVP · `v0.1.0` |
+| Búsqueda de juegos en RAWG con caché en base de datos propia                                  | MVP · `v0.1.0` |
+| Backlog personal con estados: pendiente, jugando, terminado, abandonado                       | MVP · `v0.1.0` |
+| **«Elígeme uno»:** propone un juego según los minutos disponibles y el ánimo, con los motivos | MVP · `v0.1.0` |
+| Interfaz en español e inglés                                                                  | MVP · `v0.1.0` |
+| Recomendaciones por similitud de géneros y etiquetas, sin LLM                                 | `v0.2.0`       |
 
-| Parte       | Tecnología               | Puerto en desarrollo |
-| ----------- | ------------------------ | -------------------- |
-| `backend/`  | Python, FastAPI, Uvicorn | `8000`               |
-| `frontend/` | Vue 3, TypeScript, Vite  | `5173`               |
+## Stack
 
-## Requisitos
+| Capa          | Tecnología                                                              |
+| ------------- | ----------------------------------------------------------------------- |
+| Frontend      | Vue 3 (Composition API), TypeScript, Vite, Vue Router, Pinia, Vitest    |
+| Backend       | Python 3.12, FastAPI, Pydantic 2, Uvicorn                               |
+| Base de datos | PostgreSQL 17 (Docker en local, Supabase en producción)                 |
+| Planificado   | SQLAlchemy y Alembic, autenticación JWT, vue-i18n, despliegue en Vercel |
 
-- **Python 3.12 o superior** (se recomienda 3.12 o 3.13; 3.14 puede dar problemas con librerías que compilan extensiones)
-- **Node.js** `^22.18.0` o `>=24.12.0`
-- **Docker** con Docker Compose v2 (para la base de datos PostgreSQL local)
-- **Git**
+El motivo de cada elección está en las [decisiones de arquitectura (ADR)](docs/adr/README.md).
 
-Comprobar versiones:
+## Inicio rápido
 
-```bash
-python3 --version
-node --version
-docker --version
-docker compose version
-```
-
-> En macOS el `python3` del sistema puede ser antiguo (3.9). Si es tu caso, instala una versión moderna con `brew install python@3.12` y usa `python3.12` en los comandos.
-
-## Puesta en marcha en desarrollo
-
-Necesitas **dos terminales abiertas a la vez**.
-
-### 1. Backend
+Requisitos: Python 3.12, Node.js `^22.18.0 || >=24.12.0` y Docker con Compose v2.
 
 ```bash
+# Backend: API en http://localhost:8000 (documentación en /docs)
 cd backend
-
-# Crear el entorno virtual (solo la primera vez)
-python3.12 -m venv .venv
-
-# Activarlo (cada vez que abras una terminal nueva)
-source .venv/bin/activate
-
-# Actualizar pip e instalar dependencias
-python -m pip install --upgrade pip
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Variables de entorno (rellena los valores, ver "Variables de entorno" y "Base de datos local")
-cp .env.example .env
-
-# Arrancar la base de datos (ver "Base de datos local")
-docker compose up -d
-
-# Arrancar la API con recarga automática
+cp .env.example .env              # rellena los valores
+docker compose up -d              # PostgreSQL
 uvicorn app.main:app --reload
-```
 
-- API: http://localhost:8000
-- Documentación interactiva (Swagger): http://localhost:8000/docs
-- Comprobación de que la API está viva: http://localhost:8000/health → `{"status": "ok"}`
-
-Lanza siempre `uvicorn` desde `backend/`: los imports del código parten de esa carpeta y la configuración busca el `.env` en el directorio actual.
-
-Con el entorno activo verás `(.venv)` al inicio del prompt. Para confirmarlo:
-
-```bash
-which python    # debe apuntar a .../backend/.venv/bin/python
-```
-
-Si añades una dependencia nueva, actualiza el fichero:
-
-```bash
-pip install <paquete>
-pip freeze > requirements.txt
-```
-
-### 2. Frontend
-
-```bash
+# Frontend, en otra terminal: http://localhost:5173
 cd frontend
-
-# Instalar dependencias (solo la primera vez o si cambia package.json)
 npm install
-
-# Variables de entorno
-cp .env.example .env
-
-# Arrancar el servidor de desarrollo
 npm run dev
 ```
 
-- App: http://localhost:5173
+La guía completa, con las variables de entorno, la base de datos y los problemas frecuentes, está en [docs/desarrollo.md](docs/desarrollo.md).
 
-Otros comandos útiles:
+## Estructura del repositorio
 
-```bash
-npm run test:unit     # tests unitarios (Vitest)
-npm run type-check    # comprobación de tipos
-npm run build         # build de producción
-npm run format        # formatear con Prettier
-```
-
-## Base de datos local
-
-El backend usa **PostgreSQL 17**, que se ejecuta en un contenedor definido en [`backend/docker-compose.yml`](backend/docker-compose.yml). Los datos se guardan en un volumen de Docker (`pgdata`), así que sobreviven a parar o recrear el contenedor.
-
-### Configuración
-
-Las credenciales se leen de `backend/.env` (no versionado). Las claves están listadas, sin valores, en `backend/.env.example`:
-
-| Variable            | Descripción                              | Ejemplo           |
-| ------------------- | ---------------------------------------- | ----------------- |
-| `POSTGRES_USER`     | Usuario de la base de datos              | `backlog`         |
-| `POSTGRES_PASSWORD` | Contraseña (elige una para tu entorno)   |                   |
-| `POSTGRES_DB`       | Nombre de la base de datos               | `backlog_to_play` |
-| `POSTGRES_PORT`     | Puerto en tu máquina (por defecto 5432)  | `5432`            |
-
-El puerto se publica solo en `127.0.0.1`: la base de datos no es accesible desde otros equipos de la red.
-
-### Comandos
-
-Ejecútalos desde `backend/`:
-
-| Acción                       | Comando                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| Arrancar                     | `docker compose up -d`                                                   |
-| Comprobar estado             | `docker compose ps` (espera a que ponga `healthy`)                       |
-| Ver logs                     | `docker compose logs -f db`                                              |
-| Parar (conserva los datos)   | `docker compose stop`                                                    |
-| Reiniciar                    | `docker compose restart db`                                              |
-| Eliminar el contenedor       | `docker compose down` (conserva los datos)                               |
-| Reiniciar desde cero         | `docker compose down -v` (**borra el volumen y todos los datos**)        |
-
-### Conectarse
-
-```bash
-# Consola de psql dentro del contenedor (no requiere tener psql instalado)
-docker compose exec db psql -U <POSTGRES_USER> -d <POSTGRES_DB>
-
-# Desde tu máquina, si tienes psql instalado
-psql -h localhost -p 5432 -U <POSTGRES_USER> -d <POSTGRES_DB>
-```
-
-Cadena de conexión para el backend:
+Monorepo con dos proyectos independientes que **solo se comunican por HTTP**:
 
 ```
-postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:<POSTGRES_PORT>/<POSTGRES_DB>
+backlog-to-play/
+├── backend/        API REST con FastAPI      → backend/README.md
+├── frontend/       SPA con Vue 3 + Vite      → frontend/README.md
+├── docs/           Documentación del proyecto
+├── CONTRIBUTING.md Flujo de trabajo y convenciones
+└── CHANGELOG.md    Cambios por versión
 ```
 
-## Variables de entorno
+## Documentación
 
-Cada carpeta tiene su propio `.env`, que **no se sube a git**. Lo que sí se versiona es el `.env.example` con las claves y sin valores reales. Copia el ejemplo a `.env` y rellénalo.
+| Documento                                                     | Contenido                                                                               |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [Guía de desarrollo](docs/desarrollo.md)                      | Instalación, variables de entorno, base de datos local, comandos y problemas frecuentes |
+| [Arquitectura](docs/arquitectura.md)                          | Visión general, componentes, flujo de una petición y modelo de datos                    |
+| [API](docs/api.md)                                            | Convenciones y endpoints implementados y planificados                                   |
+| [Decisiones de arquitectura](docs/adr/README.md)              | Registro de ADR: qué se decidió, por qué y qué alternativas se descartaron              |
+| [Hoja de ruta](docs/roadmap.md)                               | Hitos, versiones y requisitos funcionales                                               |
+| [Backend](backend/README.md) · [Frontend](frontend/README.md) | Detalle de cada proyecto                                                                |
+| [Guía de contribución](CONTRIBUTING.md)                       | Ramas, commits, Pull Requests y versiones                                               |
 
-### Backend
+## Atribución
 
-Además de las variables de PostgreSQL (ver [Base de datos local](#base-de-datos-local)), la API lee estas de `backend/.env`. Son **obligatorias**: si falta alguna, la API no arranca y avisa con `Field required`.
+Los datos de los juegos procederán de la [API de RAWG](https://rawg.io/apidocs). Backlog to Play no está afiliado a RAWG.
 
-| Variable       | Descripción                                                     | Ejemplo                       |
-| -------------- | --------------------------------------------------------------- | ----------------------------- |
-| `ENVIRONMENT`  | Entorno de ejecución                                            | `development`                 |
-| `CORS_ORIGINS` | Orígenes del frontend que pueden llamar a la API, en formato JSON | `["http://localhost:5173"]` |
+## Licencia
 
-`CORS_ORIGINS` es una lista, así que va entre corchetes y con comillas dobles. En producción debe contener solo el dominio real del frontend, nunca `*`.
+Copyright © 2026 Javier Martínez Vilaplana. Todos los derechos reservados.
 
-## Estructura de la API
-
-```
-backend/app/
-├── main.py          # crea la app, CORS, GET /health y monta las rutas de /api/v1
-├── core/config.py   # configuración leída del .env (pydantic-settings)
-└── api/v1/router.py # router que agrupa las rutas de negocio
-```
-
-- `GET /health` queda fuera de la versión: es una comprobación de infraestructura.
-- Todas las rutas de negocio cuelgan de `/api/v1`. Cada recurso (`auth`, `games`, `backlog`…) tendrá su propio router en `app/api/v1/`, incluido desde `router.py`.
-
-## Editor
-
-`pyrightconfig.json`, en la raíz, indica al analizador de tipos dónde está el entorno virtual (`backend/.venv`) y que los imports parten de `backend/`. Así funcionan el autocompletado y la documentación al pasar el ratón.
-
-- **VS Code:** usa la extensión Python con Pylance.
-- **Cursor:** Pylance no funciona fuera de VS Code; instala **Cursor Pyright** (`anysphere.cursorpyright`).
-
-## Convenciones
-
-- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`).
-- **Ramas:** GitHub Flow. `main` siempre estable y el trabajo en ramas cortas con Pull Request.
-
-## Problemas frecuentes
-
-| Problema                                     | Solución                                                                     |
-| -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `externally-managed-environment` al usar pip | No instales en el Python global. Activa el venv: `source .venv/bin/activate` |
-| `command not found: uvicorn`                 | El venv no está activado o falta `pip install -r requirements.txt`           |
-| Error de CORS en el navegador                | Comprueba que `CORS_ORIGINS` en `backend/.env` incluye la URL exacta del frontend (protocolo y puerto) y reinicia la API |
-| `Field required` al arrancar la API          | Falta una variable obligatoria en `backend/.env`. Compáralo con `.env.example` |
-| `error parsing value for field "cors_origins"` | `CORS_ORIGINS` no está en formato JSON. Usa `["http://localhost:5173"]`    |
-| `ModuleNotFoundError: No module named 'app'` | Lanza `uvicorn` desde `backend/`                                             |
-| Cambiaste la versión de Python               | Borra `backend/.venv` y vuelve a crearlo                                     |
-| `Cannot connect to the Docker daemon`        | Docker Desktop no está arrancado. Ábrelo y espera a que termine de iniciar   |
-| `port is already allocated` (5432)           | Otro Postgres usa ese puerto. Cambia `POSTGRES_PORT` en `backend/.env`       |
-| Cambiaste `POSTGRES_PASSWORD` y no surte efecto | Postgres solo lee las credenciales al crear el volumen. Ejecuta `docker compose down -v` (borra los datos) y vuelve a arrancar |
+El código se publica únicamente para que pueda consultarse. No se concede permiso para copiarlo, modificarlo, distribuirlo ni usarlo, total o parcialmente, sin autorización expresa del autor. Las contribuciones son bienvenidas en las condiciones de la [guía de contribución](CONTRIBUTING.md). El motivo de esta decisión está en el [ADR-13](docs/adr/0013-repositorio-sin-licencia.md).
